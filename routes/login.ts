@@ -30,18 +30,9 @@ router.post("/login", async (req: Request, res: Response) => {
       return;
     }
 
-    const token = jwt.sign(
-      { userId: user.Id, userEmail: user.Email, role: user?.Roles?.RoleName },
-      FDSConfig.JwtSecret,
-      {
-        expiresIn: "7m", // "1h",
-      },
-    );
+    const userSession = await refreshTokenForLogin(user.Id);
 
-    res.json({
-      message: "Login successful",
-      token,
-    });
+    sendJwtToken(user, res, userSession?.RefreshToken ?? "");
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -50,7 +41,7 @@ router.post("/login", async (req: Request, res: Response) => {
 router.get("/getToken/:refreshToken", async (req, res) => {
   try {
     const refreshToken = req?.params?.refreshToken;
-    const sessionInfo = await insertOrUpdateRefreshToken("", refreshToken);
+    const sessionInfo = await refreshTokenForAlreadyExist(refreshToken);
 
     if (!sessionInfo) {
       res.status(404).json({
@@ -65,8 +56,60 @@ router.get("/getToken/:refreshToken", async (req, res) => {
     });
 
     sendJwtToken(user, res, sessionInfo?.RefreshToken ?? "");
-  } catch (error) {}
+  } catch (error) {
+    console.error(error);
+    res.status(404).json({ error: error });
+  }
 });
+
+async function refreshTokenForLogin(userId: number) {
+  if (userId <= 0) {
+    return null;
+  }
+
+  const userSession = await prisma.UserSessions.findFirst({
+    where: {
+      AND: [{ UserId: userId }, { IsActive: true }],
+    },
+  });
+
+  const newToken = generateGUID();
+
+  if (userSession) {
+    await prisma.UserSessions.update({
+      data: { RefreshToken: newToken, IsActive: true },
+    });
+  } else {
+    await prisma.UserSessions.create({
+      data: {
+        RefreshtokenId: newToken,
+        CreatedDate: new Date(),
+        IsActive: true,
+      },
+    });
+  }
+
+  return { UserId: userSession.UserId, RefreshToken: newToken };
+}
+
+async function refreshTokenForAlreadyExist(refreshToken: string) {
+  const userSession = await prisma.UserSessions.findFirst({
+    where: {
+      AND: [{ RefreshtokenId: refreshToken }, { IsActive: true }],
+    },
+  });
+
+  if (!userSession) {
+    return null;
+  }
+
+  const guid = generateGUID();
+  await prisma.UserSessions.update({
+    data: { RefreshToken: guid, IsActive: true },
+  });
+
+  return { UserId: userSession.UserId, RefreshToken: guid };
+}
 
 function sendJwtToken(user: any, response: any, refreshToken: string) {
   const token = jwt.sign(
@@ -86,30 +129,6 @@ function sendJwtToken(user: any, response: any, refreshToken: string) {
     message: "Login successful",
     token,
   });
-}
-
-async function insertOrUpdateRefreshToken(
-  userId: string,
-  refreshToken: string = "",
-  isCreationRequired: boolean = false,
-) {
-  const userSession = await prisma.UserSessions.findFirst({
-    where: {
-      OR: [{ UserId: userId }, { RefreshToken: refreshToken }],
-      AND: [{ IsActive: true }],
-    },
-  });
-
-  if (!userSession) {
-    return null;
-  }
-  const newToken = generateGUID();
-
-  await prisma.UserSessions.update({
-    data: { RefreshToken: newToken },
-  });
-
-  return { UserId: userSession.UserId, RefreshToken: newToken };
 }
 
 module.exports = router;
