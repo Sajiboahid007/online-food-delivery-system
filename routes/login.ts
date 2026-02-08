@@ -3,8 +3,6 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { FDSConfig } from "../FDSConfig";
-import { authenticate } from "../authenticate";
-import { AuthenticatedRequest } from "../interfaces";
 import { generateGUID } from "../guid-generator";
 
 const prisma = new PrismaClient();
@@ -49,25 +47,69 @@ router.post("/login", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/refresh-token", async (req, res) => {
+router.get("/getToken/:refreshToken", async (req, res) => {
   try {
-    const refreshTokenId = req?.body.refreshTokenId;
-    const usersession = await prisma.UserSessions.findFirst({
-      where: { RefreshtokenId: refreshTokenId },
-    });
-    if (!usersession) {
-      res.status(404).json({ message: "Invalid refresh Token" });
+    const refreshToken = req?.params?.refreshToken;
+    const sessionInfo = await insertOrUpdateRefreshToken("", refreshToken);
+
+    if (!sessionInfo) {
+      res.status(404).json({
+        message: "invalid refresh token",
+      });
     }
-    const guid = generateGUID();
-    const updateUserSession = await prisma.UserSessions.update({
-      data: {
-        RefreshtokenId: guid,
-      },
+
+    const user = await prisma.users.findUnique({
       where: {
-        RefreshtokenId: refreshTokenId,
+        Id: sessionInfo?.UserId,
       },
     });
+
+    sendJwtToken(user, res, sessionInfo?.RefreshToken ?? "");
   } catch (error) {}
 });
+
+function sendJwtToken(user: any, response: any, refreshToken: string) {
+  const token = jwt.sign(
+    {
+      userId: user?.Id,
+      userEmail: user?.Email,
+      role: user?.Roles?.RoleName,
+      refreshToken,
+    },
+    FDSConfig.JwtSecret,
+    {
+      expiresIn: "7m", // "1h",
+    },
+  );
+
+  response.json({
+    message: "Login successful",
+    token,
+  });
+}
+
+async function insertOrUpdateRefreshToken(
+  userId: string,
+  refreshToken: string = "",
+  isCreationRequired: boolean = false,
+) {
+  const userSession = await prisma.UserSessions.findFirst({
+    where: {
+      OR: [{ UserId: userId }, { RefreshToken: refreshToken }],
+      AND: [{ IsActive: true }],
+    },
+  });
+
+  if (!userSession) {
+    return null;
+  }
+  const newToken = generateGUID();
+
+  await prisma.UserSessions.update({
+    data: { RefreshToken: newToken },
+  });
+
+  return { UserId: userSession.UserId, RefreshToken: newToken };
+}
 
 module.exports = router;
