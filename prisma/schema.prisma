@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model Roles {
+  Id       Int     @id(map: "PK__Roles__3214EC0727BB6910") @default(autoincrement())
+  RoleName String  @unique(map: "UQ__Roles__8A2B616086EAEDB9") @db.VarChar(50)
+  Users    Users[]
+}
+
+model Users {
+  Id        Int       @id(map: "PK__Users__3214EC07C08C5CE6") @default(autoincrement())
+  RoleId    Int
+  Name      String    @db.VarChar(100)
+  Email     String    @unique(map: "UQ__Users__A9D105343F90514F") @db.VarChar(100)
+  Phone     String?   @db.VarChar(20)
+  Password  String    @db.Text
+  Address   String?   @db.VarChar(255)
+  Status    Boolean?  @default(true, map: "DF__Users__Status__5535A963")
+  CreatedAt DateTime? @default(now(), map: "DF__Users__CreatedAt__5629CD9C") @db.DateTime
+  Roles     Roles     @relation(fields: [RoleId], references: [Id], onUpdate: NoAction, map: "FK_Users_Roles")
+}
+
+model UserSessions {
+  Id             String    @id(map: "PK__UserSess__3214EC07018A5C07") @db.NVarChar(36)
+  UserId         String    @db.NVarChar(36)
+  RefreshtokenId String    @unique(map: "UQ__UserSess__F147A8DFE4704B58") @db.NVarChar(36)
+  IsActive       Boolean?  @default(false, map: "DF__UserSessi__IsAct__70DDC3D8")
+  CreatedDate    DateTime? @default(now(), map: "DF__UserSessi__Creat__71D1E811") @db.DateTime
+}
