@@ -51,7 +51,7 @@ router.get("/getToken/:refreshToken", async (req, res) => {
 
     const user = await prisma.users.findUnique({
       where: {
-        Id: sessionInfo?.UserId,
+        Id: Number(sessionInfo?.UserId),
       },
     });
 
@@ -66,34 +66,46 @@ async function refreshTokenForLogin(userId: number) {
   if (userId <= 0) {
     return null;
   }
-
-  const userSession = await prisma.UserSessions.findFirst({
+  console.log("here ", userId);
+  const userSession = await prisma.userSessions.findFirst({
     where: {
-      AND: [{ UserId: userId }, { IsActive: true }],
+      AND: [{ UserId: userId.toString() }, { IsActive: true }],
     },
   });
 
   const newToken = generateGUID();
 
   if (userSession) {
-    await prisma.UserSessions.update({
-      data: { RefreshToken: newToken, IsActive: true },
+    console.log("user session null");
+    await prisma.userSessions.updateMany({
+      data: {
+        RefreshtokenId: newToken,
+        IsActive: true,
+        CreatedDate: new Date(),
+        Id: userSession.Id,
+      },
     });
   } else {
-    await prisma.UserSessions.create({
+    console.log("user session creatrnm");
+    await prisma.userSessions.create({
       data: {
         RefreshtokenId: newToken,
         CreatedDate: new Date(),
         IsActive: true,
+        Id: generateGUID(),
+        UserId: userId.toString(),
       },
     });
   }
-
-  return { UserId: userSession.UserId, RefreshToken: newToken };
+  console.log("returning ", {
+    UserId: userId.toString(),
+    RefreshToken: newToken,
+  });
+  return { UserId: userId.toString(), RefreshToken: newToken };
 }
 
 async function refreshTokenForAlreadyExist(refreshToken: string) {
-  const userSession = await prisma.UserSessions.findFirst({
+  const userSession = await prisma.userSessions.findFirst({
     where: {
       AND: [{ RefreshtokenId: refreshToken }, { IsActive: true }],
     },
@@ -104,8 +116,11 @@ async function refreshTokenForAlreadyExist(refreshToken: string) {
   }
 
   const guid = generateGUID();
-  await prisma.UserSessions.update({
-    data: { RefreshToken: guid, IsActive: true },
+  await prisma.userSessions.updateMany({
+    data: { RefreshtokenId: guid, IsActive: true },
+    where: {
+      AND: [{ RefreshtokenId: refreshToken }, { IsActive: true }],
+    },
   });
 
   return { UserId: userSession.UserId, RefreshToken: guid };
@@ -117,7 +132,6 @@ function sendJwtToken(user: any, response: any, refreshToken: string) {
       userId: user?.Id,
       userEmail: user?.Email,
       role: user?.Roles?.RoleName,
-      refreshToken,
     },
     FDSConfig.JwtSecret,
     {
@@ -128,6 +142,7 @@ function sendJwtToken(user: any, response: any, refreshToken: string) {
   response.json({
     message: "Login successful",
     token,
+    refreshToken,
   });
 }
 
