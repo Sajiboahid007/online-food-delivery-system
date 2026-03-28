@@ -33,3 +33,30 @@ model UserSessions {
   IsActive       Boolean?  @default(false, map: "DF__UserSessi__IsAct__70DDC3D8")
   CreatedDate    DateTime? @default(now(), map: "DF__UserSessi__Creat__71D1E811") @db.DateTime
 }
+
+model Categories {
+  Id             Int             @id(map: "PK__Categori__3214EC07D05AF9A8") @default(autoincrement())
+  Name           String          @db.VarChar(255)
+  Status         Boolean?        @default(true, map: "DF__Categorie__Statu__02FC7413")
+  CreatedBy      String?         @db.VarChar(255)
+  CreatedDate    DateTime?       @default(now(), map: "DF__Categorie__Creat__03F0984C") @db.DateTime
+  UpdatedBy      String?         @db.VarChar(255)
+  UpdatedDate    DateTime?       @db.DateTime
+  IsMarkToDelete Boolean?        @default(false, map: "DF__Categorie__IsMar__14270015")
+  ImageUrl       String?         @db.Text
+  SubCategories  SubCategories[]
+}
+
+model SubCategories {
+  Id             Int        @id(map: "PK__SubCateg__3214EC07C183AF83") @default(autoincrement())
+  CategoriesId   Int
+  Name           String     @db.VarChar(100)
+  Status         Boolean?
+  CreatedDate    DateTime?  @default(now(), map: "DF__SubCatego__Creat__2A164134") @db.DateTime
+  UpdatedDate    DateTime?  @db.DateTime
+  CreatedBy      String?    @db.VarChar(100)
+  UpdatedBy      String?    @db.VarChar(100)
+  IsMarkToDelete Boolean?   @default(false, map: "DF__SubCatego__IsMar__2B0A656D")
+  ImageUrl       String?    @db.Text
+  Categories     Categories @relation(fields: [CategoriesId], references: [Id], onUpdate: NoAction, map: "FK__SubCatego__Categ__29221CFB")
+}

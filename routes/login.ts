@@ -135,7 +135,7 @@ function sendJwtToken(user: any, response: any, refreshToken: string) {
     },
     FDSConfig.JwtSecret,
     {
-      expiresIn: "7m", // "1h",
+      expiresIn: "1h", // "1h",
     },
   );
 
