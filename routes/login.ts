@@ -97,10 +97,6 @@ async function refreshTokenForLogin(userId: number) {
       },
     });
   }
-  console.log("returning ", {
-    UserId: userId.toString(),
-    RefreshToken: newToken,
-  });
   return { UserId: userId.toString(), RefreshToken: newToken };
 }
 

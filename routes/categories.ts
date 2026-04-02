@@ -7,7 +7,7 @@ import { FDSConfig } from "../FDSConfig";
 const prisma = new PrismaClient();
 const router = express.Router();
 
-router.get("/categories/get", async (_req, res) => {
+router.get("/categories/get", authenticate, async (_req, res) => {
   try {
     const categories = await prisma.categories.findMany({
       where: {
@@ -73,10 +73,12 @@ router.put(
         res.status(400).json({ message: "Invalid category ID" });
         return;
       }
-      const { Name, UpdatedBy } = req.body;
+      const { Name, Status, ImageUrl, UpdatedBy } = req.body;
       const category = await prisma.categories.update({
         data: {
           Name,
+          Status,
+          ImageUrl,
           UpdatedBy: UpdatedBy ?? req.userEmail,
           UpdatedDate: new Date(),
         },

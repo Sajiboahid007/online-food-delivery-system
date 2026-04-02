@@ -12,8 +12,7 @@ export const authenticate = (
   const token = req.headers["authorization"]?.split(" ")[1];
 
   if (!token) {
-    next();
-    // res.status(401).json({ message: "Authorization token required" });
+    res.status(401).json({ message: "Authorization token required" });
     return;
   }
 

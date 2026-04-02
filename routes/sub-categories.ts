@@ -1,55 +1,68 @@
-import express, { Router } from "express";
+import express, { Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { authenticate } from "../authenticate";
 import { AuthenticatedRequest } from "../interfaces";
 import { FDSConfig } from "../FDSConfig";
 
 const prisma = new PrismaClient();
+const router = express.Router();
 
-const router = Router();
-
-router.get("/sub-categories/get", async (_req, res) => {
-  try {
-    const subCategories = await prisma.subCategories.findMany({
-      where: {
-        IsMarkToDelete: false,
-      },
-      orderBy: {
-        CreatedDate: "desc",
-      },
-    });
-    res.json({
-      message: "",
-      data: subCategories,
-      error: null,
-      statusCode: 200,
-    });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-    console.log(error);
-  }
-});
-
-router.get("/sub-categories/get/:id", authenticate, async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (isNaN(id) || id <= 0) {
-      res.status(400).json({ message: "Invalid sub-category ID" });
-      return;
+router.get(
+  "/sub-categories/get",
+  authenticate,
+  async (_req: AuthenticatedRequest, res: Response) => {
+    try {
+      const subCategories = await prisma.subCategories.findMany({
+        where: {
+          IsMarkToDelete: false,
+        },
+        orderBy: {
+          CreatedDate: "desc",
+        },
+      });
+      res.json({
+        message: "",
+        data: subCategories,
+        error: null,
+        statusCode: 200,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+      console.log(error);
     }
-    const subCategory = await prisma.subCategories.findUnique({
-      where: {
-        Id: id,
-      },
-    });
-    res.json({ message: "", data: subCategory, error: null, statusCode: 200 });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
+  },
+);
+
+router.get(
+  "/sub-categories/get/:id",
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id) || id <= 0) {
+        res.status(400).json({ message: "Invalid sub-category ID" });
+        return;
+      }
+      const subCategory = await prisma.subCategories.findUnique({
+        where: {
+          Id: id,
+        },
+      });
+      res.json({
+        message: "",
+        data: subCategory,
+        error: null,
+        statusCode: 200,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
 
 router.post(
   "/sub-categories/create",
+  authenticate,
   async (req: AuthenticatedRequest, res) => {
     try {
       const { Name, Status, ImageUrl, CategoriesId } = req.body;
@@ -78,7 +91,7 @@ router.post(
 router.put(
   "/sub-categories/update/:id",
   authenticate,
-  async (req: AuthenticatedRequest, res) => {
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = Number(req.params.id);
       if (isNaN(id) || id <= 0) {
@@ -114,7 +127,7 @@ router.put(
 router.delete(
   "/sub-categories/delete/:id",
   authenticate,
-  async (req: AuthenticatedRequest, res) => {
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = Number(req.params.id);
       if (isNaN(id) || id <= 0) {
